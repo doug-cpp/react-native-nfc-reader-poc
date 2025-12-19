@@ -1,134 +1,319 @@
-# NFC Tag Reader Proof of Concept (POC)
+# React Native NFC Tag Reader
 
-This project is a simple Proof of Concept (POC) application designed to demonstrate the reading of data from NFC tags, cards, and other devices emitting NFC signals. The application uses the [react-native-nfc-manager](https://www.npmjs.com/package/react-native-nfc-manager) library to interface with NFC hardware on Android devices.
+## Overview
+
+This project was designed to demonstrate the reading of data from NFC tags, cards, and other devices emitting NFC signals. The application uses the [react-native-nfc-manager](https://www.npmjs.com/package/react-native-nfc-manager) library to interface with NFC hardware on Android devices.
 
 The primary goal of this POC is to perform a generic NFC reading operation within a configurable timeout period (default set to 10 seconds). It aims to provide a minimal but functional demonstration of NFC tag detection and data reading, including handling cases where no tag is found within the timeout.
 
-***
-
-# Getting Started
+## Getting Started
 
 > **Note**: Make sure you have prepared your environment with the steps described below before proceeding.
 
-## Environment Setup
+### Prerequisites
 
-Before running the project, ensure your development environment is properly configured as follows:
+- Node.js (version 18 or higher)
+- Java JDK (version 17 or higher)
+- Android Studio
+- Android device with USB debugging enabled
 
-### 1. Install Java SDK (JDK)
+### Environment Setup
 
-- Download and install the latest [Java Development Kit (JDK)](https://www.oracle.com/java/technologies/javase-downloads.html) required by Android Studio and React Native.
-- Set the `JAVA_HOME` environment variable to point to your JDK installation folder.
-- Verify installation by running `java -version` in your terminal.
+#### Install Java SDK (JDK)
 
+- Download and install the latest [Java Development Kit (JDK)](https://www.oracle.com/java/technologies/javase-downloads.html)
+- Set the `JAVA_HOME` environment variable to point to your JDK installation folder
+- Verify installation by running `java -version` in your terminal
 
-### 2. Install Android Studio
+#### Install Android Studio
 
-- Download and install [Android Studio](https://developer.android.com/studio).
-- During installation, include the Android SDK, SDK Platform tools, and Android SDK Build-Tools components.
-- Configure Android Studio for React Native development by installing necessary SDK packages and ensuring you have an Android virtual device (optional if working with a real device).
+- Download and install [Android Studio](https://developer.android.com/studio)
+- During installation, include the Android SDK, SDK Platform tools, and Android SDK Build-Tools components
+- Install the necessary SDK packages for React Native development
 
+#### Prepare Your Android Device
 
-### 3. Connect an Android Device for Development
+##### Enable Developer Options
 
-- Enable **Developer options** on your device by tapping the build number in Settings > About phone multiple times.
-- Within Developer options, enable **USB Debugging**.
-- Connect the device to your computer via USB.
-- On your device, authorize the computer if prompted for USB debugging permissions.
+1. Go to **Settings** \> **About phone**
+2. Tap **Build number** 7 times until you see "You are now a developer!"
+3. Go back to **Settings** \> **Developer options**
 
+##### Enable USB Debugging
 
-### 4. Grant USB Permissions for Development
+1. In **Developer options**, enable **USB debugging**
+2. Connect your device to computer via USB cable
 
-- Ensure your computer has the appropriate USB drivers installed (especially for Windows).
-- Verify connection by running `adb devices` to see if your device is listed.
-- If your device shows as unauthorized, accept the debugging prompt on your device.
+##### Grant USB Debugging Permission
 
-***
+1. When first connecting, you'll see a dialog on your device: **"Allow USB debugging?"**
+2. Check **"Always allow from this computer"** and tap **OK**
+3. If you don't see the prompt, disconnect and reconnect the USB cable
 
-## Step 1: Start Metro
+##### Verify Connection
 
-First, you need to run **Metro**, the JavaScript bundler for React Native.
+``` sh
+adb devices
+```
 
-Run this from the root directory of the project:
+You should see your device listed. If it shows "unauthorized", check the USB debugging prompt on your device.
 
-```sh
-# Using npm
+## Setup and Configuration
+
+### Libraries Installation
+
+Install the React Native NFC Manager library via npm or yarn:
+
+```bash
+npm install react-native-nfc-manager
+
+# or
+yarn add react-native-nfc-manager
+```
+
+### Gradle Version Fix
+
+To avoid build issues, fix your Gradle version dependencies in `android/build.gradle`:
+
+``` gradle
+buildscript {
+    ext {
+        buildToolsVersion = "36.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 36
+        targetSdkVersion = 36
+        ndkVersion = "27.1.12297006"
+        kotlinVersion = "2.1.20"
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.5.2")
+        classpath("com.facebook.react:react-native-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20")
+    }
+}
+
+apply plugin: "com.facebook.react.rootproject"
+```
+
+Also specify distribution URL in `android/gradle/wrapper/gradle-wrapper.properties`:
+
+```gradle
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
+```
+
+These verifications ensure compatibility with the NFC native modules.
+
+### NFC Permissions
+
+Permissions must be declared in native configuration files.
+
+Android (`android/app/src/main/AndroidManifest.xml`):
+
+```xml
+<uses-permission android:name="android.permission.NFC" />
+<uses-feature android:name="android.hardware.nfc" android:required="true" />
+```
+
+These allow the app to request and use NFC at runtime.
+
+### Basic Usage Example
+
+Use hooks for device and permission management:
+
+```tsx
+import React from 'react';
+import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import NfcManager, {NfcTech} from 'react-native-nfc-manager';
+
+// Pre-step, call this before any NFC operations
+NfcManager.start();
+
+function NfcApp() {
+  async function readNdef() {
+    try {
+      // register for the NFC tag with NDEF in it
+      await NfcManager.requestTechnology(NfcTech.Ndef);
+      // the resolved tag object will contain `ndefMessage` property
+      const tag = await NfcManager.getTag();
+      console.warn('Tag found', tag);
+    } catch (ex) {
+      console.warn('Oops!', ex);
+    } finally {
+      // stop the nfc scanning
+      NfcManager.cancelTechnologyRequest();
+    }
+  }
+
+  return (
+    <View style={styles.wrapper}>
+      <TouchableOpacity onPress={readNdef}>
+        <Text>Scan a Tag</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
+
+export default NfcApp;
+```
+
+## Running
+
+### Install Dependencies
+
+``` sh
+npm install
+```
+
+### Start Metro Bundler
+
+``` sh
+npm start
+```
+
+### Run on Android Device
+
+``` sh
+npm run android
+```
+
+## Development Workflow
+
+### Making Changes
+
+1. Edit your files (Metro will automatically detect changes)
+2. Save the file — Fast Refresh will update the app instantly
+3. For native changes, you may need to run `npm run android` again
+
+### Optional: Install to run on device without Metro or USB Connection
+
+If you want to test or demo the POC without relying on a Metro bundler or being physically connected to your computer via USB (for example, in an outdoor environment), you can build and install a standalone release APK.
+
+```bash
+# Go to android directory
+cd android
+
+# Build a release
+./gradlew assembleRelease
+
+# The release APK will be located at:
+# android/app/build/outputs/apk/release/app-release.apk
+
+# With USB device active for now, install the just built release
+adb install app/build/outputs/apk/release/app-release.apk
+```
+
+> Note: This installation is **optional** and intended for use cases where you want to run the app fully independent from your development machine and without any live reload capabilities.
+
+### Common Development Commands
+
+``` sh
+# Start development server
 npm start
 
-# OR using Yarn
-yarn start
-```
-
-
-***
-
-## Step 2: Build and Run Your App
-
-With Metro running, open a new terminal and use one of the following commands to build and run your app on your Android device:
-
-```sh
-# Using npm
+# Build and run on Android
 npm run android
 
-# OR using Yarn
-yarn android
+# Run tests
+npm test
+
+# Lint code
+npm run lint
 ```
 
+## Creating a New POC
 
-***
+To create a new POC from this:
 
-## Step 3: Modify Your App
+1. **Copy this POC** to a new directory (`cp -r NFCReaderReactNativePOC/ NewPOC/`)
+2. **Update package.json** with your POC name and description
+3. **Add specific dependencies** your POC requires (ex.: `npm install new-lib`)
+4. **Remove unused libs in package.json** (ex.: remove `"react-native-nfc-manager": "^3.17.1",` line)
+5. **Remove `node_modules/` folder and `package-lock.json` file** (`rm -rf node_modules package-lock.json`)
+6. **Update app.json** with your display name
+7. **Rename directory**: from: `android/app/src/main/java/com/nfcreaderpoc/` to `android/app/src/main/java/com/newpoc`
+8. **Update package references** from `com.nfcreaderpoc` to `com.newpoc` (global find and replace)
+9. **Update path references** from `com/nfcreaderpoc` to `com/newpoc` (global find and replace)
+10. **Implement your functionality** in `App.tsx` and new POC components
 
-Now that you have successfully run the app, let's make changes!
+## Troubleshooting
 
-Open `App.tsx` (or the relevant entry file) in your editor and make any changes you need. The app supports Fast Refresh so you can see your updates live.
+### Device Not Recognized
 
-Open the `NfcComponent.tsx` file in your text editor of choice. This file contains the main NFC reading logic, including tag detection, timeout handling, and error display.
+``` sh
+# Check if device is connected
+adb devices
+```
 
-When you save changes to this file, your app will automatically update and reflect these changes — this is powered by Fast Refresh.
+#### If device shows "unauthorized"
 
+1. Check USB cable connection
+2. Look for USB debugging prompt on device
+3. Revoke USB debugging authorizations in Developer options and reconnect
 
-***
+### Build Failures
 
+``` sh
+# Clean Android build
+cd android && ./gradlew clean && cd ..
 
-# Troubleshooting
+# Reset Metro cache
+npm start -- --reset-cache
 
-If you run into issues running the app:
+# Full clean and reinstall dependencies
+rm -rf node_modules/ package-lock.json && npm install
+```
 
-- Confirm your device is properly connected and recognized by `adb devices`.
-- Verify Java SDK and Android Studio installations and environment variables.
-- Check NFC support on your device.
-- Review permissions and USB Debugging status.
-- See the [React Native troubleshooting guide](https://reactnative.dev/docs/troubleshooting).
+### Metro Connection Issues
 
-***
+- Ensure Metro is running (`npm start`)
+- Check network when using Wi-Fi debugging
+- Verify USB connection
 
-# Learn More
+### USB Debugging Not Appearing
+
+1. Try different USB ports
+2. Use original device USB cable
+3. Check if USB debugging is properly enabled in your device
+4. Restart both device and computer if needed
+
+### Useful ADB Commands
+
+``` sh
+# List connected devices
+adb devices
+
+# Restart ADB server
+adb kill-server && adb start-server
+
+# View device logs
+adb logcat
+
+# Install APK directly
+adb install app-debug.apk
+```
+
+## Learn More
 
 - [React Native Official Documentation](https://reactnative.dev/docs/getting-started)
-- [react-native-nfc-manager Documentation and Examples](https://github.com/revtel/react-native-nfc-manager)
 - [Android Developer Setup](https://developer.android.com/studio)
-- [NFC Basics](https://developer.android.com/guide/topics/connectivity/nfc)
+- [TypeScript with React Native](https://reactnative.dev/docs/typescript)
+- [React Native Troubleshooting](https://reactnative.dev/docs/troubleshooting)
+- [react-native-nfc-manager Documentation and Examples](https://github.com/revtel/react-native-nfc-manager)
 
-***
+This template provides a solid foundation for rapid POC development while maintaining code quality and development best practices.
 
-This README provides a concise yet comprehensive guide on both setting up your environment and understanding the purpose and capabilities of this NFC reading proof of concept application.
-<span style="display:none">[^1][^2][^3][^4][^5][^6][^7][^8]</span>
+---
 
-<div align="center">⁂</div>
-
-[^1]: https://www.npmjs.com/package/react-native-nfc-manager/v/3.13.1
-
-[^2]: https://innovision-software.com/blog/implementing-nfc-react-native
-
-[^3]: https://www.clouddefense.ai/code/javascript/example/react-native-nfc-manager
-
-[^4]: https://github.com/revtel/react-native-nfc-manager/wiki/Examples
-
-[^5]: https://blog.logrocket.com/using-nfc-tags-react-native/
-
-[^6]: https://github.com/revtel/react-native-nfc-manager
-
-[^7]: https://codesandbox.io/examples/package/react-native-nfc-manager
-
-[^8]: https://www.newline.co/courses/newline-guide-to-nfcs-with-react-native/tap-and-go-project-setup-with-react-native-and-nfc-manager
-
+<div align="center"><br/>Made with ❤️ for React Native Android Development<br/>⁂</div>
