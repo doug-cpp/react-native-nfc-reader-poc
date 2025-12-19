@@ -1,4 +1,4 @@
-package com.NFCReaderReactNativePOC
+package com.nfcreaderpoc
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

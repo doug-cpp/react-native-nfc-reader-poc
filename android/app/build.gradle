@@ -77,9 +77,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdkVersion rootProject.ext.compileSdkVersion
 
-    namespace "com.NFCReaderReactNativePOC"
+    namespace "com.nfcreaderpoc"
     defaultConfig {
-        applicationId "com.NFCReaderReactNativePOC"
+        applicationId "com.nfcreaderpoc"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

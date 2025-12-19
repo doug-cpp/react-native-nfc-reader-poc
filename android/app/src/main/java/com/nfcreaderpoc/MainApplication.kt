@@ -1,4 +1,4 @@
-package com.NFCReaderReactNativePOC
+package com.nfcreaderpoc
 
 import android.app.Application
 import com.facebook.react.PackageList
